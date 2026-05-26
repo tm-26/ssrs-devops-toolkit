@@ -238,22 +238,17 @@ function deployAsset {
         [string]$filePath
     )
 
-    # ========================================
     # Resolve Absolute File Path
-    # ========================================
-
+    
     $absoluteFilePath = Join-Path `
         $repoRoot `
         $filePath
 
     if (!(Test-Path $absoluteFilePath)) {
-
         throw "File not found: $absoluteFilePath"
     }
 
-    # ========================================
     # Build SSRS Metadata
-    # ========================================
 
     $ssrsPath = convertToSsrsPath `
         $filePath
@@ -271,9 +266,7 @@ function deployAsset {
     ensureSsrsFolder `
         $parentPath
 
-    # ========================================
     # Logging
-    # ========================================
 
     Write-Host "Deploying:"
     Write-Host $ssrsPath
@@ -284,22 +277,13 @@ function deployAsset {
     Write-Host "Item Type:"
     Write-Host $itemType
 
-    Write-Host ""
-
-    # ========================================
     # Read File
-    # ========================================
 
     $fileBytes = [System.IO.File]::ReadAllBytes(
         $absoluteFilePath
     )
 
-    # ========================================
     # Deploy
-    # ========================================
-
-    try {
-
         $ssrsProxy.CreateCatalogItem(
             $itemType,
             $itemName,
@@ -311,41 +295,8 @@ function deployAsset {
 
         Write-Host "Created successfully."
         Write-Host ""
-    }
-    catch {
-
-        Write-Host "Updating existing asset..."
-        Write-Host ""
-
-        if ($itemType -eq "Report") {
-
-            $ssrsProxy.SetItemDefinition(
-                $ssrsPath,
-                $fileBytes,
-                $null
-            )
-        }
-        else {
-
-            $ssrsProxy.CreateCatalogItem(
-                $itemType,
-                $itemName,
-                $parentPath,
-                $true,
-                $fileBytes,
-                $null
-            )
-        }
-
-        Write-Host "Updated successfully."
-        Write-Host ""
-    }
-}
-
-# ============================================
+        
 # Delete Asset
-# ============================================
-
 function deleteAsset {
 
     param (
@@ -461,8 +412,6 @@ foreach ($line in $diff) {
         "A" {
 
             Write-Host "CREATE"
-            Write-Host ""
-
             deployAsset $filePath
         }
 
