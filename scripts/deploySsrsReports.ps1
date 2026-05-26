@@ -4,6 +4,7 @@ param (
 
 # Load Config
 $scriptDirectory = $PSScriptRoot
+Set-Location $scriptDirectory
 $configPath = Join-Path $scriptDirectory "..\config.json"
 try {
     $configPath = Resolve-Path $configPath -ErrorAction Stop
@@ -340,10 +341,7 @@ foreach ($line in $diff) {
 
     if (!(isDeployableAsset $filePath)) {
 
-        Write-Host "Skipping unsupported asset:"
-        Write-Host $filePath
-        Write-Host ""
-
+        Write-Host "Skipping unsupported asset: + " $filePath
         continue
     }
 
