@@ -321,7 +321,8 @@ function deployAsset {
 
             $ssrsProxy.SetItemDefinition(
                 $ssrsPath,
-                $fileBytes
+                $fileBytes,
+                $null
             )
         }
         else {
