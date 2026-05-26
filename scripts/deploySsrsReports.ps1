@@ -2,36 +2,73 @@ param (
     [string]$configPath = "../config.json"
 )
 
+# ============================================
 # Load Config
+# ============================================
+
 $scriptDirectory = $PSScriptRoot
-Set-Location $scriptDirectory
-$configPath = Join-Path $scriptDirectory "..\config.json"
+
+$configPath = Join-Path `
+    $scriptDirectory `
+    "..\config.json"
+
 try {
-    $configPath = Resolve-Path $configPath -ErrorAction Stop
+
+    $configPath = Resolve-Path `
+        $configPath `
+        -ErrorAction Stop
 }
 catch {
+
     Write-Error "Config file not found at expected path: $configPath"
     exit 1
 }
-$config = Get-Content $configPath | ConvertFrom-Json
+
+$config = Get-Content `
+    $configPath | ConvertFrom-Json
 
 $reportServerUrl = $config.reportServerUrl
 $sourceBranch = $config.sourceBranch
 $targetBranch = $config.targetBranch
 
+# ============================================
 # Resolve Script Directory
+# ============================================
+
 $scriptDirectory = Split-Path `
     -Parent `
     $MyInvocation.MyCommand.Path
 
 Set-Location $scriptDirectory
 
+# ============================================
+# Resolve Git Repository Root
+# ============================================
+
+$repoRoot = git rev-parse --show-toplevel
+
+if (-not $repoRoot) {
+
+    throw "Could not resolve git repository root."
+}
+
+Write-Host "Repository Root:"
+Write-Host $repoRoot
+Write-Host ""
+
+# ============================================
+# Create SSRS Proxy
+# ============================================
+
 $ssrsProxy = New-WebServiceProxy `
     -Uri $reportServerUrl `
     -Namespace "SSRS" `
     -UseDefaultCredential
 
+# ============================================
 # Supported Extensions
+# ============================================
+
 function isDeployableAsset {
 
     param (
@@ -55,7 +92,10 @@ function isDeployableAsset {
     return $supportedExtensions -contains $extension
 }
 
+# ============================================
 # Resolve SSRS Item Type
+# ============================================
+
 function resolveSsrsItemType {
 
     param (
@@ -83,7 +123,10 @@ function resolveSsrsItemType {
     }
 }
 
+# ============================================
 # Convert Git Path -> SSRS Path
+# ============================================
+
 function convertToSsrsPath {
 
     param (
@@ -108,7 +151,10 @@ function convertToSsrsPath {
     return $ssrsPath
 }
 
+# ============================================
 # Get Parent Folder
+# ============================================
+
 function getSsrsParentPath {
 
     param (
@@ -126,7 +172,10 @@ function getSsrsParentPath {
     return $parent.Replace("\", "/")
 }
 
+# ============================================
 # Ensure Folder Exists
+# ============================================
+
 function ensureSsrsFolder {
 
     param (
@@ -137,7 +186,9 @@ function ensureSsrsFolder {
         return
     }
 
-    $parts = $ssrsFolderPath.Trim("/").Split("/")
+    $trimmedPath = $ssrsFolderPath.Trim("/")
+
+    $parts = $trimmedPath.Split("/")
 
     $currentPath = ""
 
@@ -177,12 +228,32 @@ function ensureSsrsFolder {
     }
 }
 
+# ============================================
 # Deploy Asset
+# ============================================
+
 function deployAsset {
 
     param (
         [string]$filePath
     )
+
+    # ========================================
+    # Resolve Absolute File Path
+    # ========================================
+
+    $absoluteFilePath = Join-Path `
+        $repoRoot `
+        $filePath
+
+    if (!(Test-Path $absoluteFilePath)) {
+
+        throw "File not found: $absoluteFilePath"
+    }
+
+    # ========================================
+    # Build SSRS Metadata
+    # ========================================
 
     $ssrsPath = convertToSsrsPath `
         $filePath
@@ -200,13 +271,32 @@ function deployAsset {
     ensureSsrsFolder `
         $parentPath
 
+    # ========================================
+    # Logging
+    # ========================================
+
     Write-Host "Deploying:"
     Write-Host $ssrsPath
+
+    Write-Host "Local File:"
+    Write-Host $absoluteFilePath
+
+    Write-Host "Item Type:"
+    Write-Host $itemType
+
     Write-Host ""
 
+    # ========================================
+    # Read File
+    # ========================================
+
     $fileBytes = [System.IO.File]::ReadAllBytes(
-        $filePath
+        $absoluteFilePath
     )
+
+    # ========================================
+    # Deploy
+    # ========================================
 
     try {
 
@@ -251,7 +341,10 @@ function deployAsset {
     }
 }
 
+# ============================================
 # Delete Asset
+# ============================================
+
 function deleteAsset {
 
     param (
@@ -281,7 +374,10 @@ function deleteAsset {
     }
 }
 
+# ============================================
 # Get Git Diff
+# ============================================
+
 Write-Host ""
 Write-Host "======================================"
 Write-Host "SSRS Git Deployment"
@@ -298,12 +394,17 @@ $diff = git diff `
     $sourceBranch
 
 if (-not $diff) {
+
     Write-Host "No changes detected."
     Write-Host ""
+
     exit 0
 }
 
+# ============================================
 # Process Git Changes
+# ============================================
+
 foreach ($line in $diff) {
 
     $parts = $line -split "`t"
@@ -311,7 +412,7 @@ foreach ($line in $diff) {
     $changeType = $parts[0]
 
     # ========================================
-    # RENAME
+    # Rename
     # ========================================
 
     if ($changeType -like "R*") {
@@ -324,10 +425,13 @@ foreach ($line in $diff) {
         }
 
         Write-Host "RENAME"
+
         Write-Host "OLD:"
         Write-Host $oldFile
+
         Write-Host "NEW:"
         Write-Host $newFile
+
         Write-Host ""
 
         deleteAsset $oldFile
@@ -336,33 +440,49 @@ foreach ($line in $diff) {
         continue
     }
 
-    # NORMAL FILE OPERATIONS
+    # ========================================
+    # Normal Operations
+    # ========================================
+
     $filePath = $parts[1]
 
     if (!(isDeployableAsset $filePath)) {
 
-        Write-Host "Skipping unsupported asset: + " $filePath
+        Write-Host "Skipping unsupported asset:"
+        Write-Host $filePath
+        Write-Host ""
+
         continue
     }
 
     switch ($changeType) {
 
         "A" {
+
             Write-Host "CREATE"
+            Write-Host ""
+
             deployAsset $filePath
         }
 
         "M" {
+
             Write-Host "UPDATE"
+            Write-Host ""
+
             deployAsset $filePath
         }
 
         "D" {
+
             Write-Host "DELETE"
+            Write-Host ""
+
             deleteAsset $filePath
         }
 
         default {
+
             Write-Host "Skipping unsupported git operation:"
             Write-Host $changeType
             Write-Host ""
