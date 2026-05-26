@@ -1,0 +1,20 @@
+#!/bin/bash
+
+echo "SSRS Pre-Push Hook Triggered"
+
+CONFIG_PATH="../config.json"
+
+# Run PowerShell deploy script
+powershell.exe -ExecutionPolicy Bypass -File \
+    "../scripts/deploySsrsReports.ps1" \
+    -configPath "$CONFIG_PATH"
+
+EXIT_CODE=$?
+
+if [ $EXIT_CODE -ne 0 ]; then
+    echo "SSRS deployment failed. Push aborted."
+    exit 1
+fi
+
+echo "SSRS deployment succeeded."
+exit 0

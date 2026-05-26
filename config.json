@@ -1,0 +1,5 @@
+{
+    "reportServerURL": "http://localhost/reportserver/ReportService2010.asmx?wsdl",
+    "sourceBranch": "test-release",
+    "targetBranch": "origin/test-release"
+}
