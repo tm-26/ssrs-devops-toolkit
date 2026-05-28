@@ -1,9 +1,0 @@
-﻿xml version=1.0 encoding=utf-8
-RptDataSource xmlnsxsd=httpwww.w3.org2001XMLSchema xmlnsxsi=httpwww.w3.org2001XMLSchema-instance Name=ReportServer
-  ConnectionProperties
-    ExtensionSQLExtension
-    ConnectStringData Source=REPORTS;Initial Catalog=ReportServerPowerBIConnectString
-    IntegratedSecuritytrueIntegratedSecurity
-  ConnectionProperties
-  DataSourceIDcc77ab7a-df14-4f0a-b105-eec2fd7c90afDataSourceID
-RptDataSource
