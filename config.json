@@ -1,3 +1,5 @@
 {
-    "reportServerURL": "http://localhost/reportserver/ReportService2010.asmx?wsdl"
+    "reportServerURL": "http://localhost/reportserver/ReportService2010.asmx?wsdl",
+    "sourceBranch": "main",
+    "targetBranch": "origin/main"
 }
